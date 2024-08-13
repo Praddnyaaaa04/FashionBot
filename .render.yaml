@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: fashion-bot-webhook  # Optional: change this to your preferred name
+    env: python
+    buildCommand: ""  # Add specific build steps here if needed
+    startCommand: "python app.py"
+    envVars:
+      - key: MONGODB_URI
+        value:  mongodb://localhost:27017/FashionBot  # Replace with your MongoDB URI

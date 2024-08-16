@@ -1,40 +1,34 @@
 from flask import Flask, request, jsonify
-import pymongo
 from pymongo import MongoClient
 
 app = Flask(__name__)
 
-# Connect to MongoDB
+# Initialize MongoDB client
 client = MongoClient("mongodb://localhost:27017/")
-db = client["FashionBot"]
+db = client['FashionBot']
+collection = db['SearchProduct']
 
-# Function to search products by name
-def search_product_by_name(product_name):
-    results = db.products.find({"productDisplayName": {"$regex": product_name, "$options": "i"}})
-    return list(results)
-
-# Webhook route
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    req = request.get_json(force=True)
-    
-    # Extract the product name from the request
-    product_name = req.get('queryResult').get('parameters').get('product_name')
+    data = request.json
+    query_text = data.get('queryResult', {}).get('queryText', '')
 
-    # Search for the product in the database
-    found_products = search_product_by_name(product_name)
-    
-    # Prepare the response based on search results
-    if found_products:
-        product = found_products[0]
-        response_text = f"Found {product['productDisplayName']} in the {product['masterCategory']} category."
+    # Example query logic
+    if 'show me a t-shirt' in query_text.lower():
+        # Query MongoDB for products matching the query
+        products = collection.find({"category": "t-shirt"})
+        product_list = [{"name": product["name"], "price": product["price"]} for product in products]
+        
+        if product_list:
+            response_text = "Here are some T-shirts you might like:\n"
+            for product in product_list:
+                response_text += f"- {product['name']} (${product['price']})\n"
+        else:
+            response_text = "No T-shirts found."
+
+        return jsonify({"fulfillmentText": response_text})
     else:
-        response_text = "Sorry, I couldn't find the product you're looking for."
-
-    # Return the response to Dialogflow
-    return jsonify({
-        "fulfillmentText": response_text
-    })
+        return jsonify({"fulfillmentText": "Sorry, I didn't understand that."})
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    app.run(debug=True)
